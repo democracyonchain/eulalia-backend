@@ -223,7 +223,3 @@ dotnet run
 }
 ```
 
-
-## Notas
-
-- Este proyecto es parte de las soluciones cívicas impulsadas por DemocracyOnChain, enfocadas en identidad, participación y confianza digital.
