@@ -1,0 +1,6 @@
+@eulalia_backend_HostAddress = http://localhost:5219
+
+GET {{eulalia_backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
