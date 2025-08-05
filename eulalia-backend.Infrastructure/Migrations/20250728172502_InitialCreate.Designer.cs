@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using eulalia_backend.Infrastructure.Data;
@@ -11,9 +12,11 @@ using eulalia_backend.Infrastructure.Data;
 namespace eulalia_backend.Infrastructure.Migrations
 {
     [DbContext(typeof(EulaliaContext))]
-    partial class EulaliaContextModelSnapshot : ModelSnapshot
+    [Migration("20250728172502_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -101,51 +104,6 @@ namespace eulalia_backend.Infrastructure.Migrations
                         .HasName("pk_auditoria");
 
                     b.ToTable("auditoria", (string)null);
-                });
-
-            modelBuilder.Entity("eulalia_backend.Domain.Entities.BiometriaCiudadano", b =>
-                {
-                    b.Property<int>("Biometriaid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("biometriaid");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Biometriaid"));
-
-                    b.Property<string>("Cedula")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("cedula");
-
-                    b.Property<string>("Estadoverificacion")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("estadoverificacion");
-
-                    b.Property<DateTime>("Fecharegistro")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("fecharegistro");
-
-                    b.Property<string>("Hashtemplate")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("hashtemplate");
-
-                    b.Property<byte[]>("Templatecifrado")
-                        .IsRequired()
-                        .HasColumnType("bytea")
-                        .HasColumnName("templatecifrado");
-
-                    b.HasKey("Biometriaid")
-                        .HasName("pk_biometrias_ciudadano");
-
-                    b.HasIndex("Cedula")
-                        .HasDatabaseName("ix_biometrias_ciudadano_cedula");
-
-                    b.ToTable("biometriaciudadano", (string)null);
                 });
 
             modelBuilder.Entity("eulalia_backend.Domain.Entities.Blockchain", b =>
@@ -263,9 +221,6 @@ namespace eulalia_backend.Infrastructure.Migrations
 
                     b.HasKey("Organizacion_Id")
                         .HasName("pk_organizacion");
-
-                    b.HasIndex("Responsable_Cedula")
-                        .HasDatabaseName("ix_organizacion_responsable_cedula");
 
                     b.ToTable("organizacion", (string)null);
                 });
@@ -457,30 +412,6 @@ namespace eulalia_backend.Infrastructure.Migrations
                         .HasName("pk_usuario");
 
                     b.ToTable("usuario", (string)null);
-                });
-
-            modelBuilder.Entity("eulalia_backend.Domain.Entities.BiometriaCiudadano", b =>
-                {
-                    b.HasOne("eulalia_backend.Domain.Entities.Ciudadano", "Ciudadano")
-                        .WithMany()
-                        .HasForeignKey("Cedula")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_biometrias_ciudadano_ciudadano_cedula");
-
-                    b.Navigation("Ciudadano");
-                });
-
-            modelBuilder.Entity("eulalia_backend.Domain.Entities.Organizacion", b =>
-                {
-                    b.HasOne("eulalia_backend.Domain.Entities.Ciudadano", "Responsable")
-                        .WithMany()
-                        .HasForeignKey("Responsable_Cedula")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_organizacion_ciudadano_responsable_cedula");
-
-                    b.Navigation("Responsable");
                 });
 
             modelBuilder.Entity("eulalia_backend.Domain.Entities.SolicitudOrganizacion", b =>

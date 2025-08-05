@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using eulalia_backend.Infrastructure.Data;
@@ -11,9 +12,11 @@ using eulalia_backend.Infrastructure.Data;
 namespace eulalia_backend.Infrastructure.Migrations
 {
     [DbContext(typeof(EulaliaContext))]
-    partial class EulaliaContextModelSnapshot : ModelSnapshot
+    [Migration("20250805142933_FixBiometriaCiudadanoNamesAndFK")]
+    partial class FixBiometriaCiudadanoNamesAndFK
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -105,12 +108,12 @@ namespace eulalia_backend.Infrastructure.Migrations
 
             modelBuilder.Entity("eulalia_backend.Domain.Entities.BiometriaCiudadano", b =>
                 {
-                    b.Property<int>("Biometriaid")
+                    b.Property<int>("BiometriaId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("biometriaid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Biometriaid"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("BiometriaId"));
 
                     b.Property<string>("Cedula")
                         .IsRequired()
@@ -118,34 +121,34 @@ namespace eulalia_backend.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("cedula");
 
-                    b.Property<string>("Estadoverificacion")
+                    b.Property<string>("EstadoVerificacion")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("estadoverificacion");
 
-                    b.Property<DateTime>("Fecharegistro")
+                    b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fecharegistro");
 
-                    b.Property<string>("Hashtemplate")
+                    b.Property<string>("HashTemplate")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("hashtemplate");
 
-                    b.Property<byte[]>("Templatecifrado")
+                    b.Property<byte[]>("TemplateCifrado")
                         .IsRequired()
                         .HasColumnType("bytea")
                         .HasColumnName("templatecifrado");
 
-                    b.HasKey("Biometriaid")
-                        .HasName("pk_biometrias_ciudadano");
+                    b.HasKey("BiometriaId")
+                        .HasName("pk_biometria_ciudadano");
 
                     b.HasIndex("Cedula")
-                        .HasDatabaseName("ix_biometrias_ciudadano_cedula");
+                        .HasDatabaseName("ix_biometria_ciudadano_cedula");
 
-                    b.ToTable("biometriaciudadano", (string)null);
+                    b.ToTable("biometria_ciudadano", (string)null);
                 });
 
             modelBuilder.Entity("eulalia_backend.Domain.Entities.Blockchain", b =>
@@ -466,7 +469,7 @@ namespace eulalia_backend.Infrastructure.Migrations
                         .HasForeignKey("Cedula")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_biometrias_ciudadano_ciudadano_cedula");
+                        .HasConstraintName("fk_biometria_ciudadano_ciudadano_cedula");
 
                     b.Navigation("Ciudadano");
                 });

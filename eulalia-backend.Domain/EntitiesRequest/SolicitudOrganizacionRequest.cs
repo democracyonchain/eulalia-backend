@@ -24,6 +24,8 @@ namespace eulalia_backend.Domain.EntitiesRequest
         public DateTime Responsable_FechaNacimiento { get; set; }
         public string Responsable_Direccion { get; set; } = default!;
         public string Responsable_Telefono { get; set; } = default!;
+        public string Responsable_Email { get; set; } = default!;
+
 
         // Datos adicionales de la solicitud
         public string? Observaciones { get; set; }

@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using EFCore.NamingConventions;
 using Microsoft.IdentityModel.Tokens;
 using eulalia_backend.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using eulalia_backend.Api.Settings;
+using eulalia_backend.Infrastructure.Services;
 using System.Text;
 using Microsoft.OpenApi.Models;
 
@@ -41,9 +43,9 @@ builder.Services.AddSwaggerGen(c =>
         Description = "JWT Authorization header usando el esquema Bearer. Ejemplo: \"Bearer {token}\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,           // 👈 importante
-        Scheme = "bearer",                        // 👈 minúscula obligatoria
-        BearerFormat = "JWT"                      // 👈 opcional pero recomendado
+        Type = SecuritySchemeType.Http,           
+        Scheme = "bearer",                        
+        BearerFormat = "JWT"                      
     });
 
    c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -69,7 +71,10 @@ builder.Services.AddEndpointsApiExplorer();
 
 // PostgreSQL
 builder.Services.AddDbContext<EulaliaContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .UseSnakeCaseNamingConvention()
+           .EnableSensitiveDataLogging()
+           .LogTo(Console.WriteLine, LogLevel.Information));
 
 //CORS
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";

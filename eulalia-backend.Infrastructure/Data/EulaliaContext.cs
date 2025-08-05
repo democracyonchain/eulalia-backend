@@ -18,6 +18,11 @@ namespace eulalia_backend.Infrastructure.Data
         public DbSet<SolicitudOrganizacion> SolicitudOrganizacion { get; set; }
         public DbSet<SSI> SSIs { get; set; }
         public DbSet<SolicitudOrganizacion> Solicitudes { get; set; }
+        public DbSet<Parametrosistema> Parametrosistema { get; set; }
+        public DbSet<BiometriaCiudadano> BiometriasCiudadano { get; set; }
+    
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -26,12 +31,17 @@ namespace eulalia_backend.Infrastructure.Data
             foreach (var entity in modelBuilder.Model.GetEntityTypes())
             {
                 // Convertir nombre de la tabla a minúsculas
-                entity.SetTableName(entity.GetTableName()!.ToLower());
+                var tableName = entity.GetTableName();
+                if (tableName != null && !tableName.StartsWith("__"))
+                {
+                    entity.SetTableName(tableName.ToLower());
+                }
 
                 // Convertir cada nombre de columna a minúsculas
                 foreach (var property in entity.GetProperties())
                 {
-                    property.SetColumnName(property.Name.ToLower());
+                    if (!entity.GetTableName()!.StartsWith("__"))
+                        property.SetColumnName(property.Name.ToLower());
                 }
 
                 // Convertir claves primarias y foráneas
@@ -50,6 +60,17 @@ namespace eulalia_backend.Infrastructure.Data
                     index.SetDatabaseName(index.GetDatabaseName()!.ToLower());
                 }
             }
+            
+            modelBuilder.Entity<BiometriaCiudadano>(entity =>
+            {
+                entity.HasOne(b => b.Ciudadano)
+                      .WithMany()
+                      .HasForeignKey(b => b.Cedula)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<BiometriaCiudadano>().ToTable("biometriaciudadano");
+
         }
 
     }
