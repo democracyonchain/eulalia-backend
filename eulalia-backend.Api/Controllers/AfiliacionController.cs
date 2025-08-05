@@ -53,6 +53,36 @@ namespace eulalia_backend.Api.Controllers
             return NoContent();
         }
 
+        [HttpGet("afiliados/{organizacionId}")]
+        public async Task<IActionResult> GetAfiliadosPorOrganizacion(int organizacionId)
+        {
+            var afiliados = await _context.Afiliaciones
+                .Where(a => a.OrganizacionId == organizacionId && a.Estado == "activo")
+                .Select(a => new
+                {
+                    a.Afiliacion_Id,
+                    a.Cedula,
+                    a.FechaAfiliacion,
+                    a.Estado
+                })
+                .ToListAsync();
+
+            return Ok(afiliados);
+        }
+        [HttpPut("{id}/anular")]
+        public async Task<IActionResult> AnularAfiliacion(int id)
+        {
+            var afiliacion = await _context.Afiliaciones.FindAsync(id);
+            if (afiliacion == null)
+                return NotFound();
+
+            afiliacion.Estado = "Anulado";
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

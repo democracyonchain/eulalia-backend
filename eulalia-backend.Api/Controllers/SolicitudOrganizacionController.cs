@@ -1,6 +1,7 @@
 ﻿using eulalia_backend.Domain.Entities;
 using eulalia_backend.Domain.EntitiesRequest;
 using eulalia_backend.Infrastructure.Data;
+using eulalia_backend.Api.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,13 +29,11 @@ namespace eulalia_backend.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest("❌ Datos inválidos.");
 
-            // Validar duplicados por cédula
             var organizacionExistente = await _context.Organizaciones
                 .AnyAsync(o => o.Responsable_Cedula == data.Responsable_Cedula);
             if (organizacionExistente)
                 return Conflict("⚠️ Ya existe una organización registrada con esta cédula.");
 
-            // Validar duplicados por nombre
             var nombreExistente = await _context.Organizaciones
                 .AnyAsync(o => o.Nombre.ToLower() == data.Nombre.ToLower());
             if (nombreExistente)
@@ -51,14 +50,38 @@ namespace eulalia_backend.Api.Controllers
                     Cedula = data.Responsable_Cedula,
                     Nombre = data.Responsable_Nombre,
                     Apellido = data.Responsable_Apellido,
-                    Fecha_Nacimiento = data.Responsable_FechaNacimiento,
+                    Fecha_Nacimiento = DateTime.SpecifyKind(data.Responsable_FechaNacimiento, DateTimeKind.Utc),
                     Direccion = data.Responsable_Direccion,
                     Telefono = data.Responsable_Telefono
                 };
 
                 _context.Ciudadanos.Add(ciudadano);
+                
                 await _context.SaveChangesAsync();
+               
+
+
             }
+
+            // Verificar existencia de usuario
+            var usuarioExistente = await _context.Usuarios
+                .FirstOrDefaultAsync(u => u.Correo == data.Responsable_Email);
+
+            if (usuarioExistente != null)
+                return Conflict("⚠️ Ya existe un usuario registrado con este correo.");
+
+            // Crear usuario con rol Partido
+            var usuario = new Usuario
+            {
+                Correo = data.Responsable_Email,
+                Contrasena = PasswordHelper.HashPassword(data.Responsable_Cedula), 
+                Cedula_Ciudadano = data.Responsable_Cedula,
+                Rol_Id = 3, // Partido
+                Fecha_Creacion = DateTime.UtcNow
+            };
+
+            _context.Usuarios.Add(usuario);
+            await _context.SaveChangesAsync();
 
             // Crear organización
             var organizacion = new Organizacion
@@ -95,47 +118,46 @@ namespace eulalia_backend.Api.Controllers
             });
         }
 
-        /// <summary>
-        /// Listar todas las solicitudes (solo admin y organismo)
-        /// </summary>
         [HttpGet("listar")]
-        [Authorize(Roles = "admin,organismo")]
+        [Authorize]
         public async Task<IActionResult> Listar()
         {
             var solicitudes = await _context.SolicitudOrganizacion
                 .Include(s => s.Organizacion)
+                    .ThenInclude(o => o.Responsable) // ← esta línea es clave
                 .OrderByDescending(s => s.FechaSolicitud)
                 .ToListAsync();
 
             return Ok(solicitudes);
         }
 
+
         /// <summary>
-        /// Cambiar el estado de una solicitud
+        /// Actualizar el estado de una solicitud (privado)
         /// </summary>
-        [HttpPut("actualizar-estado/{id}")]
-        [Authorize(Roles = "admin,organismo")]
-        public async Task<IActionResult> ActualizarEstado(int id, [FromBody] CambiarEstadoRequest request)
+        [HttpPut("{id}/estado")]
+        [Authorize]
+        public async Task<IActionResult> ActualizarEstado(int id, [FromBody] UpdateEstadoSolicitudOrganizacionRequest request)
         {
-            var solicitud = await _context.SolicitudOrganizacion.FindAsync(id);
+            var solicitud = await _context.SolicitudOrganizacion
+                .Include(s => s.Organizacion)
+                .FirstOrDefaultAsync(s => s.Solicitud_Id == id);
+
             if (solicitud == null)
                 return NotFound("❌ Solicitud no encontrada.");
 
+            if (request.Estado != "aprobado" && request.Estado != "rechazado")
+                return BadRequest("⚠️ Estado no válido. Debe ser 'aprobado' o 'rechazado'.");
+
             solicitud.Estado = request.Estado;
-            solicitud.Observaciones = request.Observaciones;
             solicitud.FechaRevision = DateTime.UtcNow;
-            solicitud.UsuarioRevisor = request.UsuarioRevisor;
+
+            solicitud.Organizacion.Estado_Validacion = request.Estado;
 
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "✅ Estado actualizado correctamente." });
         }
 
-        public class CambiarEstadoRequest
-        {
-            public string Estado { get; set; } = "aprobada"; // o "rechazada"
-            public string? Observaciones { get; set; }
-            public int UsuarioRevisor { get; set; }
-        }
     }
 }

@@ -27,35 +27,42 @@ namespace eulalia_backend.Api.Controllers
             _context = context;
         }
 
-        [AllowAnonymous]
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == request.email);
+            var usuario = await _context.Usuarios
+                .FirstOrDefaultAsync(u => u.Correo == request.email);
 
             if (usuario == null || !PasswordHelper.VerifyPassword(request.Password, usuario.Contrasena))
                 return Unauthorized("Correo o contraseña inválidos");
 
-            if (usuario == null)
-                return Unauthorized("Correo o contraseña inválidos");
+            // Buscar si el usuario es responsable de alguna organización
+            var organizacion = await _context.Organizaciones
+                .FirstOrDefaultAsync(o => o.Responsable_Cedula == usuario.Cedula_Ciudadano);
 
-            var token = GenerateJwtToken(usuario.Correo, usuario.Rol_Id);
+            var token = GenerateJwtToken(usuario, organizacion?.Organizacion_Id);
             return Ok(new { token });
         }
 
-
-
-        private string GenerateJwtToken(string correo, int rolId)
+        private string GenerateJwtToken(eulalia_backend.Domain.Entities.Usuario usuario, int? organizacionId)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_authSettings.Key));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var claims = new[]
+            var claims = new List<Claim>
+    {
+        new Claim(JwtRegisteredClaimNames.Sub, usuario.Correo),
+        new Claim("rol", usuario.Rol_Id.ToString()),
+        new Claim("cedula", usuario.Cedula_Ciudadano.ToString()),
+        new Claim("usuario_id", usuario.Usuario_Id.ToString()),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
+
+            if (organizacionId.HasValue)
             {
-                new Claim(JwtRegisteredClaimNames.Sub, correo),
-                new Claim("rol", rolId.ToString()),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
+                claims.Add(new Claim("organizacion_id", organizacionId.Value.ToString()));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: _authSettings.Issuer,
@@ -67,7 +74,8 @@ namespace eulalia_backend.Api.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
     }
 
-   
+
 }

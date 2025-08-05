@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace eulalia_backend.Api.Controllers
 {
-    [Authorize]
+    
     [ApiController]
     [Route("api/[controller]")]
     public class ProvinciaController : ControllerBase

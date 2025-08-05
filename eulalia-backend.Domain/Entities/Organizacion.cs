@@ -17,5 +17,8 @@ namespace eulalia_backend.Domain.Entities
         public string Responsable_Cedula { get; set; } = default!;
         public string Estado_Validacion { get; set; } = "pendiente";
         public DateTime Fecha_Creacion { get; set; } = DateTime.UtcNow;
+
+        [ForeignKey(nameof(Responsable_Cedula))]
+        public Ciudadano? Responsable { get; set; }
     }
 }
