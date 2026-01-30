@@ -15,5 +15,10 @@ obj/
 appsettings*.json
 !appsettings.Development.json
 
+# Agent workflows and skills
+.agent/
+.reportsAgents/
+.requirements/
+
 # Others
 .env
