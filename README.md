@@ -1,101 +1,58 @@
-# 🧪 Automated Tests – Eulalia Backend
+# 🧪 Eulalia Backend - VoterID System
 
-This module contains the unit tests for the core business logic of the Eulalia digital voter ID system.
-
----
-
-## 🇬🇧 English Version
-
-### ✅ Structure
-
-```
-eulalia-backend.Tests/
-├── Services/
-│   ├── AfiliacionServiceTests.cs
-│   ├── CiudadanoServiceTests.cs
-│   ├── OrganizacionServiceTests.cs
-│   ├── ParametrosSistemaServiceTests.cs
-│   ├── AuthServiceTests.cs
-│   └── BlockchainServiceTests.cs
-```
-
-### ✅ Technologies Used
-
-- `xUnit` – Main testing framework
-- `Moq` – For mocking dependencies
-- `FluentAssertions` – For clean, expressive assertions
-- `coverlet.collector` – For code coverage reports (optional)
-
-### ✅ Execution
-
-**From Visual Studio:** Open `Test Explorer`, then click "Run All Tests".  
-**From terminal:**
-
-```bash
-dotnet test
-```
-
-Make sure the following projects are referenced in `eulalia-backend.Tests`:
-- `eulalia-backend.Application`
-- `eulalia-backend.Domain`
-- `eulalia-backend.Shared`
-
-### ✅ Scope of Tests
-
-- Citizen registration and validation
-- Political organization creation
-- Political affiliation rules and status updates
-- Authentication logic
-- System parameter configuration
-- Blockchain transaction data simulation
+Este repositorio contiene el núcleo transaccional y la lógica de orquestación para el sistema de Identidad Digital Descentralizada (VoterID) **Eulalia**.
 
 ---
 
-## 🇪🇸 Versión en Español
+## 🏛️ Arquitectura (Clean Architecture)
 
-### ✅ Estructura
+El proyecto sigue los principios de **Arquitectura Limpia** para asegurar el desacoplamiento y la mantenibilidad:
 
-```
-eulalia-backend.Tests/
-├── Services/
-│   ├── AfiliacionServiceTests.cs
-│   ├── CiudadanoServiceTests.cs
-│   ├── OrganizacionServiceTests.cs
-│   ├── ParametrosSistemaServiceTests.cs
-│   ├── AuthServiceTests.cs
-│   └── BlockchainServiceTests.cs
-```
-
-### ✅ Tecnologías utilizadas
-
-- `xUnit` – Framework principal de pruebas
-- `Moq` – Para simular dependencias
-- `FluentAssertions` – Para validaciones limpias y legibles
-- `coverlet.collector` – Para reporte de cobertura (opcional)
-
-### ✅ Ejecución
-
-**Desde Visual Studio:** Abrir el `Test Explorer` y ejecutar "Run All Tests".  
-**Desde consola:**
-
-```bash
-dotnet test
-```
-
-Asegúrate de tener referenciados los siguientes proyectos en `eulalia-backend.Tests`:
-- `eulalia-backend.Application`
-- `eulalia-backend.Domain`
-- `eulalia-backend.Shared`
-
-### ✅ Cobertura de las pruebas
-
-- Registro y validación de ciudadanos
-- Creación de organizaciones políticas
-- Reglas de afiliación y cambios de estado
-- Lógica de autenticación
-- Configuración de parámetros del sistema
-- Simulación de inserciones blockchain
+- **Api**: Endpoints REST, autenticación JWT y configuración.
+- **Application**: Casos de uso y lógica de negocio (Servicios y DTOs).
+- **Domain**: Entidades de negocio, reglas core y enums.
+- **Infrastructure**: Persistencia (PostgreSQL), clientes externos (SSI/Identus, Blockchain) y Biometría.
 
 ---
 
-**Author:** David Tacuri – 2025
+## 🚀 Milestone 3: Estado Actual
+
+Se ha completado la **Fase 1** de la cimentación técnica:
+- [x] Desacoplamiento de Controladores (Uso de Servicios y DTOs).
+- [x] Implementación de la Capa de Aplicación.
+- [x] Configuración de Entorno (.env y appsettings).
+- [x] Base de Datos PostgreSQL operativa.
+
+---
+
+## 🛠️ Tecnologías
+
+- **C# / .NET 8**
+- **Entity Framework Core 9** (PostgreSQL)
+- **JWT** para Autenticación.
+- **Doxygen/Swagger** para documentación de API.
+- **xUnit / Moq** para pruebas automatizadas.
+
+---
+
+## ⚙️ Configuración y Ejecución
+
+1. **Requisitos**: .NET 8 SDK, Docker (para PostgreSQL).
+2. **Base de Datos**: Configura el archivo `.env` en la raíz con tus credenciales.
+3. **Ejecución**:
+   ```bash
+   dotnet restore
+   dotnet run --project eulalia-backend.Api
+   ```
+
+---
+
+## 🆔 Integración SSI (En Desarrollo)
+
+Eulalia se integra con **Hyperledger Identus** para la gestión de Identidades Descentralizadas:
+- Emisión de DIDs con anclaje en Cardano.
+- Gestión de Credenciales Verificables (VCs).
+- Flujos DIDComm para comunicación segura Holder-Issuer.
+
+---
+**David Tacuri** - 2026 | Proyecto Catalyst Fund 12

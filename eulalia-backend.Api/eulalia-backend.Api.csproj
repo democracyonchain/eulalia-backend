@@ -36,6 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\eulalia-backend.Application\eulalia-backend.Application.csproj" />
     <ProjectReference Include="..\eulalia-backend.Infrastructure\eulalia-backend.Infrastructure.csproj" />
   </ItemGroup>
 

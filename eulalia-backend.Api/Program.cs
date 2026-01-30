@@ -7,6 +7,9 @@ using eulalia_backend.Api.Settings;
 using eulalia_backend.Infrastructure.Services;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using eulalia_backend.Application.Interfaces;
+using eulalia_backend.Application.Services;
+using eulalia_backend.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,6 +78,15 @@ builder.Services.AddDbContext<EulaliaContext>(options =>
            .UseSnakeCaseNamingConvention()
            .EnableSensitiveDataLogging()
            .LogTo(Console.WriteLine, LogLevel.Information));
+
+// Register Application Services
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<ICiudadanoService, CiudadanoService>();
+builder.Services.AddScoped<IAfiliacionService, AfiliacionService>();
+builder.Services.AddScoped<IOrganizacionService, OrganizacionService>();
+builder.Services.AddScoped<IProvinciaService, ProvinciaService>();
+builder.Services.AddScoped<ISSIService, SSIService>();
+builder.Services.AddScoped<BiometriaService>(); 
 
 //CORS
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
