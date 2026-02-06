@@ -6,6 +6,6 @@ namespace eulalia_backend.Application.Interfaces
     public interface ISSIService
     {
         Task<SSIInvitationDto> CreateInvitationAsync(string cedula);
-        Task<string> GetDidStatusAsync(string cedula);
+        Task<SSIStatusDto> GetDidStatusAsync(string cedula);
     }
 }

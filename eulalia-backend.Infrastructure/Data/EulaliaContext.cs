@@ -16,9 +16,9 @@ namespace eulalia_backend.Infrastructure.Data
         public DbSet<Auditoria> Auditorias { get; set; }
         public DbSet<Provincia> Provincias { get; set; }
         public DbSet<SolicitudOrganizacion> SolicitudOrganizacion { get; set; }
-        public DbSet<SSI> SSIs { get; set; }
-        public DbSet<SolicitudOrganizacion> Solicitudes { get; set; }
+        public DbSet<SsiIssuance> SsiIssuances { get; set; }
         public DbSet<Parametrosistema> Parametrosistema { get; set; }
+
         public DbSet<BiometriaCiudadano> BiometriasCiudadano { get; set; }
     
 
@@ -27,39 +27,13 @@ namespace eulalia_backend.Infrastructure.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Forzar nombres de tablas en minúsculas
-            foreach (var entity in modelBuilder.Model.GetEntityTypes())
-            {
-                // Convertir nombre de la tabla a minúsculas
-                var tableName = entity.GetTableName();
-                if (tableName != null && !tableName.StartsWith("__"))
-                {
-                    entity.SetTableName(tableName.ToLower());
-                }
-
-                // Convertir cada nombre de columna a minúsculas
-                foreach (var property in entity.GetProperties())
-                {
-                    if (!entity.GetTableName()!.StartsWith("__"))
-                        property.SetColumnName(property.Name.ToLower());
-                }
-
-                // Convertir claves primarias y foráneas
-                foreach (var key in entity.GetKeys())
-                {
-                    key.SetName(key.GetName()!.ToLower());
-                }
-
-                foreach (var fk in entity.GetForeignKeys())
-                {
-                    fk.SetConstraintName(fk.GetConstraintName()!.ToLower());
-                }
-
-                foreach (var index in entity.GetIndexes())
-                {
-                    index.SetDatabaseName(index.GetDatabaseName()!.ToLower());
-                }
-            }
+            // Relación 1:1 entre Usuario y Ciudadano
+            modelBuilder.Entity<Usuario>()
+                .HasOne(u => u.Ciudadano)
+                .WithOne()
+                .HasForeignKey<Usuario>(u => u.Cedula_Ciudadano)
+                .HasPrincipalKey<Ciudadano>(c => c.Cedula)
+                .OnDelete(DeleteBehavior.Cascade);
             
             modelBuilder.Entity<BiometriaCiudadano>(entity =>
             {
@@ -70,8 +44,8 @@ namespace eulalia_backend.Infrastructure.Data
             });
 
             modelBuilder.Entity<BiometriaCiudadano>().ToTable("biometriaciudadano");
-
         }
+
 
     }
 

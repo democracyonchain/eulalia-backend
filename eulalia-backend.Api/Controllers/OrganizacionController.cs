@@ -32,11 +32,13 @@ namespace eulalia_backend.Api.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         public async Task<ActionResult<OrganizacionDto>> Create(OrganizacionDto dto)
         {
             var created = await _service.CreateAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = created.OrganizacionId }, created);
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, OrganizacionDto dto)

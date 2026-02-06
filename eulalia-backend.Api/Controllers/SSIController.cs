@@ -20,15 +20,22 @@ namespace eulalia_backend.Api.Controllers
         [HttpPost("invitation/{cedula}")]
         public async Task<ActionResult<SSIInvitationDto>> RequestInvitation(string cedula)
         {
-            var invitation = await _service.CreateInvitationAsync(cedula);
-            return Ok(invitation);
+            try 
+            {
+                var invitation = await _service.CreateInvitationAsync(cedula);
+                return Ok(invitation);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error creating SSI invitation", error = ex.Message });
+            }
         }
 
         [HttpGet("status/{cedula}")]
-        public async Task<ActionResult<object>> GetStatus(string cedula)
+        public async Task<ActionResult<SSIStatusDto>> GetStatus(string cedula)
         {
             var status = await _service.GetDidStatusAsync(cedula);
-            return Ok(new { cedula, estado = status });
+            return Ok(status);
         }
     }
 }

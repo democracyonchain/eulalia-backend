@@ -22,6 +22,9 @@ namespace eulalia_backend.Application.Services
                 Nombre = o.Nombre,
                 Tipo = o.Tipo_Organizacion,
                 CodigoProvincia = o.Codigo_Provincia,
+                CodigoCanton = o.Codigo_Canton,
+                CodigoParroquia = o.Codigo_Parroquia,
+                ResponsableCedula = o.Responsable_Cedula,
                 Estado = o.Estado_Validacion
             });
         }
@@ -36,6 +39,9 @@ namespace eulalia_backend.Application.Services
                 Nombre = o.Nombre,
                 Tipo = o.Tipo_Organizacion,
                 CodigoProvincia = o.Codigo_Provincia,
+                CodigoCanton = o.Codigo_Canton,
+                CodigoParroquia = o.Codigo_Parroquia,
+                ResponsableCedula = o.Responsable_Cedula,
                 Estado = o.Estado_Validacion
             };
         }
@@ -47,6 +53,9 @@ namespace eulalia_backend.Application.Services
                 Nombre = dto.Nombre,
                 Tipo_Organizacion = dto.Tipo,
                 Codigo_Provincia = dto.CodigoProvincia,
+                Codigo_Canton = dto.CodigoCanton,
+                Codigo_Parroquia = dto.CodigoParroquia,
+                Responsable_Cedula = dto.ResponsableCedula,
                 Estado_Validacion = dto.Estado,
                 Fecha_Creacion = DateTime.UtcNow
             };
@@ -64,12 +73,16 @@ namespace eulalia_backend.Application.Services
             entity.Nombre = dto.Nombre;
             entity.Tipo_Organizacion = dto.Tipo;
             entity.Codigo_Provincia = dto.CodigoProvincia;
+            entity.Codigo_Canton = dto.CodigoCanton;
+            entity.Codigo_Parroquia = dto.CodigoParroquia;
+            entity.Responsable_Cedula = dto.ResponsableCedula;
             entity.Estado_Validacion = dto.Estado;
 
             _repository.Update(entity);
             await _repository.SaveChangesAsync();
             return true;
         }
+
 
         public async Task<bool> DeleteAsync(int id)
         {

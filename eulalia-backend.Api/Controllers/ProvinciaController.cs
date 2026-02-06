@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using eulalia_backend.Application.Interfaces;
 using eulalia_backend.Application.DTOs;
 
 namespace eulalia_backend.Api.Controllers
 {
     
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ProvinciaController : ControllerBase
@@ -17,12 +19,14 @@ namespace eulalia_backend.Api.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<ProvinciaDto>>> GetAll()
         {
             return Ok(await _service.GetAllAsync());
         }
 
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<ActionResult<ProvinciaDto>> GetById(int id)
         {
             var provincia = await _service.GetByIdAsync(id);
