@@ -1,9 +1,7 @@
-﻿
-using eulalia_backend.Domain.Entities;
-using eulalia_backend.Infrastructure.Data;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using eulalia_backend.Application.Interfaces;
+using eulalia_backend.Application.DTOs;
 
 namespace eulalia_backend.Api.Controllers
 {
@@ -12,87 +10,40 @@ namespace eulalia_backend.Api.Controllers
     [Route("api/[controller]")]
     public class AfiliacionController : ControllerBase
     {
-        private readonly EulaliaContext _context;
+        private readonly IAfiliacionService _service;
 
-        public AfiliacionController(EulaliaContext context)
+        public AfiliacionController(IAfiliacionService service)
         {
-            _context = context;
+            _service = service;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Afiliacion>>> GetAll()
+        public async Task<ActionResult<IEnumerable<AfiliacionDto>>> GetAll()
         {
-            return await _context.Afiliaciones.ToListAsync();
+            return Ok(await _service.GetAllAsync());
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Afiliacion>> GetById(int id)
+        public async Task<ActionResult<AfiliacionDto>> GetById(int id)
         {
-            var item = await _context.Afiliaciones.FindAsync(id);
+            var item = await _service.GetByIdAsync(id);
             if (item == null) return NotFound();
-            return item;
+            return Ok(item);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Afiliacion>> Create(Afiliacion afiliacion)
+        public async Task<ActionResult<AfiliacionDto>> Create(AfiliacionDto dto)
         {
-            if (afiliacion.FechaAfiliacion.Kind == DateTimeKind.Unspecified)
-                afiliacion.FechaAfiliacion = DateTime.SpecifyKind(afiliacion.FechaAfiliacion, DateTimeKind.Utc);
-
-            _context.Afiliaciones.Add(afiliacion);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = afiliacion.Afiliacion_Id }, afiliacion);
+            var created = await _service.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = created.AfiliacionId }, created);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, Afiliacion afiliacion)
-        {
-            if (id != afiliacion.Afiliacion_Id) return BadRequest();
-            _context.Entry(afiliacion).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-            return NoContent();
-        }
-
-        [HttpGet("afiliados/{organizacionId}")]
-        public async Task<IActionResult> GetAfiliadosPorOrganizacion(int organizacionId)
-        {
-            var afiliados = await _context.Afiliaciones
-                .Where(a => a.OrganizacionId == organizacionId && a.Estado == "activo")
-                .Select(a => new
-                {
-                    a.Afiliacion_Id,
-                    a.Cedula,
-                    a.FechaAfiliacion,
-                    a.Estado
-                })
-                .ToListAsync();
-
-            return Ok(afiliados);
-        }
         [HttpPut("{id}/anular")]
         public async Task<IActionResult> AnularAfiliacion(int id)
         {
-            var afiliacion = await _context.Afiliaciones.FindAsync(id);
-            if (afiliacion == null)
-                return NotFound();
-
-            afiliacion.Estado = "Anulado";
-            await _context.SaveChangesAsync();
-
+            var success = await _service.AnularAsync(id);
+            if (!success) return NotFound();
             return NoContent();
         }
-
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var item = await _context.Afiliaciones.FindAsync(id);
-            if (item == null) return NotFound();
-
-            _context.Afiliaciones.Remove(item);
-            await _context.SaveChangesAsync();
-            return NoContent();
-        }
-
     }
 }

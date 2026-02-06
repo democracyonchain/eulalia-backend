@@ -1,9 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using eulalia_backend.Infrastructure.Data;
-using eulalia_backend.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
-
+using eulalia_backend.Application.Interfaces;
+using eulalia_backend.Application.DTOs;
 
 namespace eulalia_backend.Api.Controllers
 {
@@ -12,37 +10,32 @@ namespace eulalia_backend.Api.Controllers
     [Route("api/[controller]")]
     public class CiudadanoController : ControllerBase
     {
-        private readonly EulaliaContext _context;
+        private readonly ICiudadanoService _service;
 
-        public CiudadanoController(EulaliaContext context)
+        public CiudadanoController(ICiudadanoService service)
         {
-            _context = context;
+            _service = service;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Ciudadano>>> GetAll()
+        public async Task<ActionResult<IEnumerable<CiudadanoDto>>> GetAll()
         {
-            return await _context.Ciudadanos.ToListAsync();
+            return Ok(await _service.GetAllAsync());
         }
 
         [HttpGet("{cedula}")]
-        public async Task<ActionResult<Ciudadano>> GetByCedula(string cedula)
+        public async Task<ActionResult<CiudadanoDto>> GetByCedula(string cedula)
         {
-            var ciudadano = await _context.Ciudadanos.FindAsync(cedula);
-            if (ciudadano == null) return NotFound();
-            return ciudadano;
+            var item = await _service.GetByCedulaAsync(cedula);
+            if (item == null) return NotFound();
+            return Ok(item);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Ciudadano>> Create(Ciudadano ciudadano)
+        public async Task<ActionResult<CiudadanoDto>> Create(CiudadanoDto dto)
         {
-            if (ciudadano.Fecha_Nacimiento.HasValue)
-                ciudadano.Fecha_Nacimiento = DateTime.SpecifyKind(ciudadano.Fecha_Nacimiento.Value, DateTimeKind.Utc);
-
-            _context.Ciudadanos.Add(ciudadano);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetByCedula), new { cedula = ciudadano.Cedula }, ciudadano);
-
+            var created = await _service.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetByCedula), new { cedula = created.Cedula }, created);
         }
     }
 }

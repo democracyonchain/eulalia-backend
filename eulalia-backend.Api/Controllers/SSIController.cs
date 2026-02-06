@@ -1,9 +1,7 @@
-﻿using eulalia_backend.Api.Utils;
-using eulalia_backend.Domain.Entities;
-using eulalia_backend.Infrastructure.Data;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using eulalia_backend.Application.Interfaces;
+using eulalia_backend.Application.DTOs;
 
 namespace eulalia_backend.Api.Controllers
 {
@@ -12,55 +10,32 @@ namespace eulalia_backend.Api.Controllers
     [Route("api/[controller]")]
     public class SSIController : ControllerBase
     {
-        private readonly EulaliaContext _context;
+        private readonly ISSIService _service;
 
-        public SSIController(EulaliaContext context)
+        public SSIController(ISSIService service)
         {
-            _context = context;
+            _service = service;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<SSI>>> GetAll()
+        [HttpPost("invitation/{cedula}")]
+        public async Task<ActionResult<SSIInvitationDto>> RequestInvitation(string cedula)
         {
-            return await _context.SSIs.ToListAsync();
+            try 
+            {
+                var invitation = await _service.CreateInvitationAsync(cedula);
+                return Ok(invitation);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error creating SSI invitation", error = ex.Message });
+            }
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<SSI>> GetById(int id)
+        [HttpGet("status/{cedula}")]
+        public async Task<ActionResult<SSIStatusDto>> GetStatus(string cedula)
         {
-            var item = await _context.SSIs.FindAsync(id);
-            if (item == null) return NotFound();
-            return item;
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<SSI>> Create(SSI ssi)
-        {
-            ssi.Fecha_Emision = DateTimeHelper.EnsureUtc(ssi.Fecha_Emision);
-            _context.SSIs.Add(ssi);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = ssi.Ssi_Id }, ssi);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, SSI ssi)
-        {
-            if (id != ssi.Ssi_Id) return BadRequest();
-            ssi.Fecha_Emision = DateTimeHelper.EnsureUtc(ssi.Fecha_Emision);
-            _context.Entry(ssi).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-            return NoContent();
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var item = await _context.SSIs.FindAsync(id);
-            if (item == null) return NotFound();
-
-            _context.SSIs.Remove(item);
-            await _context.SaveChangesAsync();
-            return NoContent();
+            var status = await _service.GetDidStatusAsync(cedula);
+            return Ok(status);
         }
     }
 }

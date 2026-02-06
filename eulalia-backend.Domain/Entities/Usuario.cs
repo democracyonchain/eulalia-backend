@@ -18,5 +18,9 @@ namespace eulalia_backend.Domain.Entities
         public int Rol_Id { get; set; }
         public string? Cedula_Ciudadano { get; set; }
         public DateTime? Fecha_Creacion { get; set; }
+
+        [ForeignKey(nameof(Cedula_Ciudadano))]
+        public virtual Ciudadano? Ciudadano { get; set; }
     }
 }
+

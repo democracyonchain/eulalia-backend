@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using eulalia_backend.Api.Controllers;
+using eulalia_backend.Application.DTOs;
+using eulalia_backend.Application.Services;
 using eulalia_backend.Domain.Entities;
 using eulalia_backend.Infrastructure.Data;
+using eulalia_backend.Infrastructure.Repositories;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,9 +29,11 @@ namespace eulalia_backend.Tests.Controllers
         public async Task Create_ShouldAddAfiliacion()
         {
             var context = GetInMemoryContext();
-            var controller = new AfiliacionController(context);
+            var repo = new Repository<Afiliacion>(context);
+            var service = new AfiliacionService(repo);
+            var controller = new AfiliacionController(service);
 
-            var nuevaAfiliacion = new Afiliacion
+            var nuevaAfiliacion = new AfiliacionDto
             {
                 Cedula = "1234567890",
                 OrganizacionId = 1,
@@ -48,63 +53,61 @@ namespace eulalia_backend.Tests.Controllers
         {
             var context = GetInMemoryContext();
             context.Afiliaciones.AddRange(new List<Afiliacion> {
-                new Afiliacion { Cedula = "1", OrganizacionId = 1 },
-                new Afiliacion { Cedula = "2", OrganizacionId = 2 }
+                new Afiliacion { Cedula = "1", OrganizacionId = 1, Estado = "activa", FechaAfiliacion = DateTime.UtcNow },
+                new Afiliacion { Cedula = "2", OrganizacionId = 2, Estado = "activa", FechaAfiliacion = DateTime.UtcNow }
             });
             await context.SaveChangesAsync();
 
-            var controller = new AfiliacionController(context);
+            var repo = new Repository<Afiliacion>(context);
+            var service = new AfiliacionService(repo);
+            var controller = new AfiliacionController(service);
+
             var result = await controller.GetAll();
 
-            result.Value.Should().HaveCount(2);
+            result.Result.Should().BeOfType<OkObjectResult>();
+            var okResult = result.Result as OkObjectResult;
+            var items = okResult.Value as IEnumerable<AfiliacionDto>;
+            items.Should().HaveCount(2);
         }
 
         [Fact]
         public async Task GetById_ShouldReturnCorrectAfiliacion()
         {
             var context = GetInMemoryContext();
-            var afiliacion = new Afiliacion { Cedula = "999", OrganizacionId = 99 };
+            var afiliacion = new Afiliacion { Cedula = "999", OrganizacionId = 99, Estado = "activa", FechaAfiliacion = DateTime.UtcNow };
             context.Afiliaciones.Add(afiliacion);
             await context.SaveChangesAsync();
 
-            var controller = new AfiliacionController(context);
+            var repo = new Repository<Afiliacion>(context);
+            var service = new AfiliacionService(repo);
+            var controller = new AfiliacionController(service);
+
             var result = await controller.GetById(afiliacion.Afiliacion_Id);
 
-            result.Value.Should().NotBeNull();
-            result.Value.Cedula.Should().Be("999");
+            result.Result.Should().BeOfType<OkObjectResult>();
+            var okResult = result.Result as OkObjectResult;
+            var item = okResult.Value as AfiliacionDto;
+            item.Should().NotBeNull();
+            item!.Cedula.Should().Be("999");
         }
 
         [Fact]
-        public async Task Update_ShouldModifyAfiliacion()
+        public async Task Anular_ShouldSetEstadoToAnulado()
         {
             var context = GetInMemoryContext();
-            var afiliacion = new Afiliacion { Cedula = "mod", OrganizacionId = 1 };
+            var afiliacion = new Afiliacion { Cedula = "mod", OrganizacionId = 1, Estado = "activa", FechaAfiliacion = DateTime.UtcNow };
             context.Afiliaciones.Add(afiliacion);
             await context.SaveChangesAsync();
 
-            var controller = new AfiliacionController(context);
-            afiliacion.Cedula = "modificado";
+            var repo = new Repository<Afiliacion>(context);
+            var service = new AfiliacionService(repo);
+            var controller = new AfiliacionController(service);
 
-            var result = await controller.Update(afiliacion.Afiliacion_Id, afiliacion);
+            var result = await controller.AnularAfiliacion(afiliacion.Afiliacion_Id);
             result.Should().BeOfType<NoContentResult>();
 
             var dbAfiliacion = await context.Afiliaciones.FindAsync(afiliacion.Afiliacion_Id);
-            dbAfiliacion.Cedula.Should().Be("modificado");
-        }
-
-        [Fact]
-        public async Task Delete_ShouldRemoveAfiliacion()
-        {
-            var context = GetInMemoryContext();
-            var afiliacion = new Afiliacion { Cedula = "del", OrganizacionId = 1 };
-            context.Afiliaciones.Add(afiliacion);
-            await context.SaveChangesAsync();
-
-            var controller = new AfiliacionController(context);
-            var result = await controller.Delete(afiliacion.Afiliacion_Id);
-
-            result.Should().BeOfType<NoContentResult>();
-            (await context.Afiliaciones.FindAsync(afiliacion.Afiliacion_Id)).Should().BeNull();
+            dbAfiliacion.Estado.Should().Be("Anulado");
         }
     }
 }

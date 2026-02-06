@@ -7,12 +7,30 @@ using eulalia_backend.Api.Settings;
 using eulalia_backend.Infrastructure.Services;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using eulalia_backend.Application.Interfaces;
+using eulalia_backend.Application.Services;
+using eulalia_backend.Infrastructure.Repositories;
+using eulalia_backend.Infrastructure.Options;
+using eulalia_backend.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // JWT config from appsettings.json
 builder.Services.Configure<AuthSettings>(builder.Configuration.GetSection("Jwt"));
 var jwt = builder.Configuration.GetSection("Jwt").Get<AuthSettings>();
+Console.WriteLine($"[DEBUG] Environment: {builder.Environment.EnvironmentName}");
+Console.WriteLine($"[DEBUG] JWT Object is null: {jwt == null}");
+if (jwt != null) {
+    Console.WriteLine($"[DEBUG] JWT Key Length: {jwt.Key?.Length}");
+    Console.WriteLine($"[DEBUG] JWT Issuer: {jwt.Issuer}");
+}
+if (jwt == null || string.IsNullOrEmpty(jwt.Key)) throw new Exception("JWT Configuration is missing or Key is empty in appsettings.json");
+
+// Identus Options
+builder.Services.Configure<IdentusOptions>(builder.Configuration.GetSection("Identus"));
+
+// Identus HttpClient
+builder.Services.AddHttpClient<IIdentusClient, IdentusClient>();
 
 // JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -75,6 +93,15 @@ builder.Services.AddDbContext<EulaliaContext>(options =>
            .UseSnakeCaseNamingConvention()
            .EnableSensitiveDataLogging()
            .LogTo(Console.WriteLine, LogLevel.Information));
+
+// Register Application Services
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<ICiudadanoService, CiudadanoService>();
+builder.Services.AddScoped<IAfiliacionService, AfiliacionService>();
+builder.Services.AddScoped<IOrganizacionService, OrganizacionService>();
+builder.Services.AddScoped<IProvinciaService, ProvinciaService>();
+builder.Services.AddScoped<ISSIService, SSIService>();
+builder.Services.AddScoped<BiometriaService>(); 
 
 //CORS
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";

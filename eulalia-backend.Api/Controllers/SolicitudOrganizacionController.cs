@@ -76,8 +76,9 @@ namespace eulalia_backend.Api.Controllers
                 Correo = data.Responsable_Email,
                 Contrasena = PasswordHelper.HashPassword(data.Responsable_Cedula), 
                 Cedula_Ciudadano = data.Responsable_Cedula,
-                Rol_Id = 3, // Partido
+                Rol_Id = 2, // Organizacion
                 Fecha_Creacion = DateTime.UtcNow
+
             };
 
             _context.Usuarios.Add(usuario);

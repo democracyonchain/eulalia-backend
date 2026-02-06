@@ -1,8 +1,7 @@
-﻿using eulalia_backend.Domain.Entities;
-using eulalia_backend.Infrastructure.Data;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using eulalia_backend.Application.Interfaces;
+using eulalia_backend.Application.DTOs;
 
 namespace eulalia_backend.Api.Controllers
 {
@@ -11,58 +10,49 @@ namespace eulalia_backend.Api.Controllers
     [ApiController]
     public class OrganizacionController : ControllerBase
     {
-        private readonly EulaliaContext _context;
+        private readonly IOrganizacionService _service;
 
-        public OrganizacionController(EulaliaContext context)
+        public OrganizacionController(IOrganizacionService service)
         {
-            _context = context;
+            _service = service;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Organizacion>>> GetAll()
+        public async Task<ActionResult<IEnumerable<OrganizacionDto>>> GetAll()
         {
-            return await _context.Organizaciones.ToListAsync();
+            return Ok(await _service.GetAllAsync());
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Organizacion>> GetById(int id)
+        public async Task<ActionResult<OrganizacionDto>> GetById(int id)
         {
-            var org = await _context.Organizaciones.FindAsync(id);
+            var org = await _service.GetByIdAsync(id);
             if (org == null) return NotFound();
-            return org;
+            return Ok(org);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Organizacion>> Create(Organizacion organizacion)
+        [AllowAnonymous]
+        public async Task<ActionResult<OrganizacionDto>> Create(OrganizacionDto dto)
         {
-
-            if (organizacion.Fecha_Creacion.Kind == DateTimeKind.Unspecified)
-                organizacion.Fecha_Creacion = DateTime.SpecifyKind(organizacion.Fecha_Creacion, DateTimeKind.Utc);
-
-
-            _context.Organizaciones.Add(organizacion);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = organizacion.Organizacion_Id }, organizacion);
+            var created = await _service.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = created.OrganizacionId }, created);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, Organizacion organizacion)
-        {
-            if (id != organizacion.Organizacion_Id) return BadRequest();
 
-            _context.Entry(organizacion).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, OrganizacionDto dto)
+        {
+            var success = await _service.UpdateAsync(id, dto);
+            if (!success) return NotFound();
             return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var organizacion = await _context.Organizaciones.FindAsync(id);
-            if (organizacion == null) return NotFound();
-
-            _context.Organizaciones.Remove(organizacion);
-            await _context.SaveChangesAsync();
+            var success = await _service.DeleteAsync(id);
+            if (!success) return NotFound();
             return NoContent();
         }
     }

@@ -1,63 +1,59 @@
-﻿using eulalia_backend.Domain.Entities;
-using eulalia_backend.Infrastructure.Data;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
-
+using eulalia_backend.Application.Interfaces;
+using eulalia_backend.Application.DTOs;
 
 namespace eulalia_backend.Api.Controllers
 {
     
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ProvinciaController : ControllerBase
     {
-        private readonly EulaliaContext _context;
+        private readonly IProvinciaService _service;
 
-        public ProvinciaController(EulaliaContext context)
+        public ProvinciaController(IProvinciaService service)
         {
-            _context = context;
+            _service = service;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Provincia>>> GetAll()
+        [AllowAnonymous]
+        public async Task<ActionResult<IEnumerable<ProvinciaDto>>> GetAll()
         {
-            return await _context.Provincias.ToListAsync();
+            return Ok(await _service.GetAllAsync());
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Provincia>> GetById(int id)
+        [AllowAnonymous]
+        public async Task<ActionResult<ProvinciaDto>> GetById(int id)
         {
-            var provincia = await _context.Provincias.FindAsync(id);
+            var provincia = await _service.GetByIdAsync(id);
             if (provincia == null) return NotFound();
-            return provincia;
+            return Ok(provincia);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Provincia>> Create(Provincia provincia)
+        public async Task<ActionResult<ProvinciaDto>> Create(ProvinciaDto dto)
         {
-            _context.Provincias.Add(provincia);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = provincia.Codigo_Provincia }, provincia);
+            var created = await _service.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = created.Codigo }, created);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, Provincia provincia)
+        public async Task<IActionResult> Update(int id, ProvinciaDto dto)
         {
-            if (id != provincia.Codigo_Provincia) return BadRequest();
-            _context.Entry(provincia).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            var success = await _service.UpdateAsync(id, dto);
+            if (!success) return NotFound();
             return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var provincia = await _context.Provincias.FindAsync(id);
-            if (provincia == null) return NotFound();
-
-            _context.Provincias.Remove(provincia);
-            await _context.SaveChangesAsync();
+            var success = await _service.DeleteAsync(id);
+            if (!success) return NotFound();
             return NoContent();
         }
     }
