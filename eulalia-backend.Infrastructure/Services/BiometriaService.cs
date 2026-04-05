@@ -1,4 +1,4 @@
-﻿using eulalia_backend.Domain.Entities;
+using eulalia_backend.Domain.Entities;
 using eulalia_backend.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -15,10 +15,18 @@ namespace eulalia_backend.Infrastructure.Services
         public BiometriaService(EulaliaContext context, IConfiguration config)
         {
             _context = context;
-            _encryptionKey = Encoding.UTF8.GetBytes(config["Biometria:EncryptionKey"]);
+            var keyFromConfig =
+                Environment.GetEnvironmentVariable("BIOMETRIA_ENCRYPTION_KEY") ??
+                config["Biometria:EncryptionKey"];
+            if (string.IsNullOrWhiteSpace(keyFromConfig))
+                throw new InvalidOperationException("Biometria:EncryptionKey no está configurada.");
+
+            _encryptionKey = Encoding.UTF8.GetBytes(keyFromConfig);
+            if (_encryptionKey.Length != 16 && _encryptionKey.Length != 24 && _encryptionKey.Length != 32)
+                throw new InvalidOperationException("Biometria:EncryptionKey debe tener 16, 24 o 32 bytes.");
         }
 
-        public async Task RegistrarBiometriaAsync(string cedula, byte[] template)
+        public async Task RegistrarBiometriaAsync(string cedula, byte[] template, string estadoInicial = "pendiente")
         {
             if (await _context.BiometriasCiudadano.AnyAsync(b => b.Cedula == cedula))
                 throw new InvalidOperationException("Ya existe un registro biométrico para esta cédula.");
@@ -31,7 +39,7 @@ namespace eulalia_backend.Infrastructure.Services
                 Cedula = cedula,
                 Templatecifrado = cifrado,
                 Hashtemplate = hash,
-                Estadoverificacion = "pendiente",
+                Estadoverificacion = estadoInicial,
                 Fecharegistro = DateTime.UtcNow
             };
 
@@ -63,16 +71,18 @@ namespace eulalia_backend.Infrastructure.Services
 
         private byte[] CifrarAES(byte[] data)
         {
-            using var aes = Aes.Create();
-            aes.Key = _encryptionKey;
-            aes.GenerateIV();
+            // AES-GCM envelope: [12-byte nonce][16-byte tag][ciphertext]
+            var nonce = RandomNumberGenerator.GetBytes(12);
+            var tag = new byte[16];
+            var ciphertext = new byte[data.Length];
 
-            using var encryptor = aes.CreateEncryptor();
-            var cifrado = encryptor.TransformFinalBlock(data, 0, data.Length);
+            using var aesGcm = new AesGcm(_encryptionKey, 16);
+            aesGcm.Encrypt(nonce, data, ciphertext, tag);
 
-            var resultado = new byte[aes.IV.Length + cifrado.Length];
-            Buffer.BlockCopy(aes.IV, 0, resultado, 0, aes.IV.Length);
-            Buffer.BlockCopy(cifrado, 0, resultado, aes.IV.Length, cifrado.Length);
+            var resultado = new byte[nonce.Length + tag.Length + ciphertext.Length];
+            Buffer.BlockCopy(nonce, 0, resultado, 0, nonce.Length);
+            Buffer.BlockCopy(tag, 0, resultado, nonce.Length, tag.Length);
+            Buffer.BlockCopy(ciphertext, 0, resultado, nonce.Length + tag.Length, ciphertext.Length);
 
             return resultado;
         }
