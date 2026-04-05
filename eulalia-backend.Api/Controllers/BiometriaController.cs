@@ -1,20 +1,25 @@
-﻿using eulalia_backend.Domain.EntitiesRequest;
+using eulalia_backend.Domain.EntitiesRequest;
 using eulalia_backend.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 
 namespace eulalia_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin,Validador")] // Solo estos roles pueden acceder
+    [Authorize]
     public class BiometriaController : ControllerBase
     {
         private readonly BiometriaService _biometriaService;
+        private readonly double _livenessMinScore;
+        private readonly int _maxEmbeddingLength;
 
-        public BiometriaController(BiometriaService biometriaService)
+        public BiometriaController(BiometriaService biometriaService, IConfiguration configuration)
         {
             _biometriaService = biometriaService;
+            _livenessMinScore = configuration.GetValue<double?>("Biometria:LivenessMinScore") ?? 0.75;
+            _maxEmbeddingLength = configuration.GetValue<int?>("Biometria:MaxEmbeddingBase64Length") ?? 16384;
         }
 
         /// <summary>
@@ -35,6 +40,58 @@ namespace eulalia_backend.Api.Controllers
             {
                 await _biometriaService.RegistrarBiometriaAsync(request.Cedula, templateBytes);
                 return Ok(new { mensaje = "Biometría registrada correctamente." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { mensaje = ex.Message });
+            }
+        }
+
+        [HttpPost("enroll-self")]
+        public async Task<IActionResult> RegistrarBiometriaSelf([FromBody] RegistrarBiometriaSelfRequest request)
+        {
+            var cedulaToken = User.FindFirst("cedula")?.Value;
+            if (string.IsNullOrWhiteSpace(cedulaToken))
+                return Forbid();
+
+            if (!string.Equals(cedulaToken, request.Cedula, StringComparison.Ordinal))
+                return Forbid();
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (request.LivenessScore < _livenessMinScore)
+                return BadRequest(new
+                {
+                    mensaje = $"Liveness insuficiente. Mínimo requerido: {_livenessMinScore:F2}.",
+                    score = request.LivenessScore
+                });
+
+            if (request.EmbeddingBase64.Length > _maxEmbeddingLength)
+                return BadRequest(new { mensaje = "EmbeddingBase64 excede el tamaño permitido." });
+
+            try
+            {
+                byte[] templateBytes;
+                try
+                {
+                    templateBytes = Convert.FromBase64String(request.EmbeddingBase64);
+                }
+                catch (FormatException)
+                {
+                    return BadRequest(new { mensaje = "EmbeddingBase64 no tiene un formato válido." });
+                }
+
+                await _biometriaService.RegistrarBiometriaAsync(request.Cedula, templateBytes, "enrolled");
+
+                return Ok(new
+                {
+                    mensaje = "Biometría registrada correctamente.",
+                    cedula = request.Cedula,
+                    estado = "enrolled",
+                    livenessScore = request.LivenessScore,
+                    modelVersion = request.ModelVersion
+                });
             }
             catch (InvalidOperationException ex)
             {
