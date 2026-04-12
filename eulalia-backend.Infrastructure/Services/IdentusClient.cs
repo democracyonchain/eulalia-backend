@@ -32,17 +32,13 @@ namespace eulalia_backend.Infrastructure.Services
         {
             try
             {
-                // Documentation: https://hyperledger-identus.github.io/docs/
-                // Endpoint to create out-of-band invitation
                 var requestBody = new
                 {
                     label = label
                 };
 
-                // Note: The exact path in Identus for OOB invitation is usually /connections/create-invitation
-                // or /out-of-band/create-invitation depending on the version and configuration.
-                // Based on standard Identus OpenAPI:
-                var response = await _httpClient.PostAsJsonAsync("connections/create-invitation", requestBody);
+                // Cloud Agent 1.39 endpoint for creating OOB connection invitations.
+                var response = await _httpClient.PostAsJsonAsync("connections", requestBody);
                 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -53,9 +49,23 @@ namespace eulalia_backend.Infrastructure.Services
 
                 var result = await response.Content.ReadFromJsonAsync<JsonElement>();
                 
-                // Inspecting the typical response from Identus
-                string invitationUrl = result.GetProperty("invitationUrl").GetString() ?? throw new Exception("Invitation URL not found in response");
-                string invitationId = result.GetProperty("connectionId").GetString() ?? ""; // connectionId is often used as invitation identifier
+                var invitationId = result.TryGetProperty("connectionId", out var connectionId)
+                    ? connectionId.GetString() ?? ""
+                    : "";
+
+                string? invitationUrl = null;
+                if (result.TryGetProperty("invitationUrl", out var topLevelInvitationUrl))
+                {
+                    invitationUrl = topLevelInvitationUrl.GetString();
+                }
+                else if (result.TryGetProperty("invitation", out var invitation) &&
+                         invitation.TryGetProperty("invitationUrl", out var nestedInvitationUrl))
+                {
+                    invitationUrl = nestedInvitationUrl.GetString();
+                }
+
+                if (string.IsNullOrWhiteSpace(invitationUrl))
+                    throw new Exception("Invitation URL not found in Identus response.");
 
                 return (invitationUrl, invitationId);
             }
