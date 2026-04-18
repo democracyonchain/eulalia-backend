@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using System.IO;
+using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using eulalia_backend.Application.Interfaces;
 using eulalia_backend.Application.DTOs;
@@ -36,6 +38,23 @@ namespace eulalia_backend.Api.Controllers
         {
             var status = await _service.GetDidStatusAsync(cedula);
             return Ok(status);
+        }
+
+        [HttpPost("webhook")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Webhook()
+        {
+            try
+            {
+                using var reader = new StreamReader(Request.Body, Encoding.UTF8);
+                var body = await reader.ReadToEndAsync();
+                await _service.HandleWebhookEventAsync(body);
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Webhook processing error", error = ex.Message });
+            }
         }
     }
 }

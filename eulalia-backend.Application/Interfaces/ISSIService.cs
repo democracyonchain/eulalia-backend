@@ -7,5 +7,6 @@ namespace eulalia_backend.Application.Interfaces
     {
         Task<SSIInvitationDto> CreateInvitationAsync(string cedula);
         Task<SSIStatusDto> GetDidStatusAsync(string cedula);
+        Task HandleWebhookEventAsync(string eventBody);
     }
 }

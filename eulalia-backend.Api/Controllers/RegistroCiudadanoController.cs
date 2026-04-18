@@ -46,8 +46,7 @@ namespace eulalia_backend.Api.Controllers
 
             var baseOk = ciudadano != null;
             var ssiOk = ultimaSsi is not null &&
-                        (ultimaSsi.Status == SsiIssuanceStatus.InvitationGenerated ||
-                         ultimaSsi.Status == SsiIssuanceStatus.CredentialIssued);
+                        ultimaSsi.Status == SsiIssuanceStatus.CredentialIssued;
 
             var bioOk = biometria != null &&
                         (string.Equals(biometria.Estadoverificacion, "enrolled", StringComparison.OrdinalIgnoreCase) ||
