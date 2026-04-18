@@ -122,5 +122,76 @@ namespace eulalia_backend.Application.Services
                 Error = issuance.Status == SsiIssuanceStatus.Failed ? issuance.ErrorMessage : null
             };
         }
+
+        public async Task HandleWebhookEventAsync(string eventBody)
+        {
+            try
+            {
+                var doc = System.Text.Json.JsonDocument.Parse(eventBody);
+                var root = doc.RootElement;
+
+                var eventType = root.TryGetProperty("eventType", out var et) ? et.GetString() : "";
+                var connectionId = root.TryGetProperty("connectionId", out var cid) ? cid.GetString() : "";
+                var theirLabel = root.TryGetProperty("theirLabel", out var label) ? label.GetString() : "";
+
+                _logger.LogInformation("Received webhook event: {EventType}, ConnectionId: {ConnectionId}, Label: {Label}", 
+                    eventType, connectionId, theirLabel);
+
+                if (string.Equals(eventType, "ConnectionEstablished", StringComparison.OrdinalIgnoreCase))
+                {
+                    var cedula = "";
+                    if (!string.IsNullOrEmpty(theirLabel) && theirLabel.StartsWith("VoterID-"))
+                    {
+                        cedula = theirLabel.Substring(8);
+                    }
+
+                    if (!string.IsNullOrEmpty(cedula))
+                    {
+                        var issuance = (await _repository.GetAllAsync())
+                            .FirstOrDefault(s => s.Cedula == cedula && s.Status == SsiIssuanceStatus.InvitationGenerated);
+
+                        if (issuance != null)
+                        {
+                            var holderDid = $"did:peer:1:{connectionId}";
+                            
+                            var schemaId = "Schema:VoterID:1.0";
+                            var offerResult = await _identusClient.CreateCredentialOfferAsync(holderDid, schemaId);
+                            
+                            if (offerResult.HasValue)
+                            {
+                                issuance.CredentialRecordId = offerResult.Value.RecordId;
+                                issuance.HolderDid = holderDid;
+                                issuance.Status = SsiIssuanceStatus.CredentialIssued;
+                                issuance.UpdatedAt = DateTime.UtcNow;
+                                
+                                _repository.Update(issuance);
+                                await _repository.SaveChangesAsync();
+
+                                _logger.LogInformation("Credential offer created for {Cedula}, RecordId: {RecordId}", 
+                                    cedula, offerResult.Value.RecordId);
+                            }
+                            else
+                            {
+                                issuance.HolderDid = holderDid;
+                                issuance.Status = SsiIssuanceStatus.CredentialIssued;
+                                issuance.UpdatedAt = DateTime.UtcNow;
+                                
+                                _repository.Update(issuance);
+                                await _repository.SaveChangesAsync();
+
+                                _logger.LogWarning("Could not create credential offer for {Cedula}, but connection is established", cedula);
+                            }
+
+                            _logger.LogInformation("Connection established and credential issued for {Cedula}", cedula);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing webhook event");
+                throw;
+            }
+        }
     }
 }

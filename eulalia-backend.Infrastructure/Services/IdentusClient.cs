@@ -80,7 +80,6 @@ namespace eulalia_backend.Infrastructure.Services
         {
             try
             {
-                // Typical endpoint: /issue-credentials/records/{credentialRecordId}
                 var response = await _httpClient.GetAsync($"issue-credentials/records/{credentialRecordId}");
                 
                 if (!response.IsSuccessStatusCode)
@@ -91,11 +90,68 @@ namespace eulalia_backend.Infrastructure.Services
 
                 var result = await response.Content.ReadFromJsonAsync<JsonElement>();
                 return result.GetProperty("protocolState").GetString();
-                // protocolState could be: RequestReceived, CredentialGenerated, CredentialSent, etc.
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Exception while calling Identus GetCredentialRecordStatusAsync");
+                return null;
+            }
+        }
+
+        public async Task<(string RecordId, string OfferUrl)?> CreateCredentialOfferAsync(string holderDid, string schemaId)
+        {
+            try
+            {
+                var requestBody = new
+                {
+                    holderId = holderDid,
+                    claims = new { },
+                    schemaId = schemaId,
+                    credentialDefinitionId = schemaId
+                };
+
+                var response = await _httpClient.PostAsJsonAsync("issue-credentials/credential-offers", requestBody);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Error creating credential offer: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                    return null;
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+                
+                var recordId = result.TryGetProperty("recordId", out var rid) ? rid.GetString() ?? "" : "";
+                var offerUrl = result.TryGetProperty("offerUrl", out var ourl) ? ourl.GetString() ?? "" : "";
+
+                return (recordId, offerUrl);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception while calling Identus CreateCredentialOfferAsync");
+                return null;
+            }
+        }
+
+        public async Task<string?> IssueCredentialAsync(string recordId)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"issue-credentials/records/{recordId}/issue-credential", null);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Error issuing credential: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                    return null;
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+                return result.TryGetProperty("protocolState", out var state) ? state.GetString() : null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception while calling Identus IssueCredentialAsync");
                 return null;
             }
         }

@@ -53,11 +53,10 @@ namespace eulalia_backend.Api.Controllers
                     .OrderByDescending(s => s.UpdatedAt)
                     .FirstOrDefaultAsync();
 
-                var ssiOk = ultimaSsi is not null &&
-                            (ultimaSsi.Status == SsiIssuanceStatus.InvitationGenerated ||
-                             ultimaSsi.Status == SsiIssuanceStatus.CredentialIssued);
+var ssiOk = ultimaSsi is not null &&
+                            ultimaSsi.Status == SsiIssuanceStatus.CredentialIssued;
                 if (!ssiOk)
-                    return BadRequest(new { message = "Debe completar la vinculación SSI antes de afiliarse." });
+                    return BadRequest(new { message = "Debe completar la vinculación SSI (credencial emitida) antes de afiliarse." });
 
                 var biometria = await _context.BiometriasCiudadano
                     .AsNoTracking()
