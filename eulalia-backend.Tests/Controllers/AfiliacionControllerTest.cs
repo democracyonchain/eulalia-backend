@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -31,7 +31,7 @@ namespace eulalia_backend.Tests.Controllers
             var context = GetInMemoryContext();
             var repo = new Repository<Afiliacion>(context);
             var service = new AfiliacionService(repo);
-            var controller = new AfiliacionController(service);
+            var controller = new AfiliacionController(service, context);
 
             var nuevaAfiliacion = new AfiliacionDto
             {
@@ -60,7 +60,7 @@ namespace eulalia_backend.Tests.Controllers
 
             var repo = new Repository<Afiliacion>(context);
             var service = new AfiliacionService(repo);
-            var controller = new AfiliacionController(service);
+            var controller = new AfiliacionController(service, context);
 
             var result = await controller.GetAll();
 
@@ -80,7 +80,7 @@ namespace eulalia_backend.Tests.Controllers
 
             var repo = new Repository<Afiliacion>(context);
             var service = new AfiliacionService(repo);
-            var controller = new AfiliacionController(service);
+            var controller = new AfiliacionController(service, context);
 
             var result = await controller.GetById(afiliacion.Afiliacion_Id);
 
@@ -101,7 +101,7 @@ namespace eulalia_backend.Tests.Controllers
 
             var repo = new Repository<Afiliacion>(context);
             var service = new AfiliacionService(repo);
-            var controller = new AfiliacionController(service);
+            var controller = new AfiliacionController(service, context);
 
             var result = await controller.AnularAfiliacion(afiliacion.Afiliacion_Id);
             result.Should().BeOfType<NoContentResult>();
