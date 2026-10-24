@@ -54,7 +54,7 @@ namespace eulalia_backend.Api.Controllers
     {
         new Claim(JwtRegisteredClaimNames.Sub, usuario.Correo),
         new Claim("rol", usuario.Rol_Id.ToString()),
-        new Claim("cedula", usuario.Cedula_Ciudadano.ToString()),
+        new Claim("cedula", usuario.Cedula_Ciudadano ?? string.Empty),
         new Claim("usuario_id", usuario.Usuario_Id.ToString()),
         new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
     };

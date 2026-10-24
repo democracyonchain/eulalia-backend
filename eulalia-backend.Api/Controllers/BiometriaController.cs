@@ -52,10 +52,16 @@ namespace eulalia_backend.Api.Controllers
         {
             var cedulaToken = User.FindFirst("cedula")?.Value;
             if (string.IsNullOrWhiteSpace(cedulaToken))
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    mensaje = "La sesión no contiene una cédula ciudadana válida. Inicie sesión nuevamente."
+                });
 
-            if (!string.Equals(cedulaToken, request.Cedula, StringComparison.Ordinal))
-                return Forbid();
+            if (!string.Equals(cedulaToken.Trim(), request.Cedula?.Trim(), StringComparison.Ordinal))
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    mensaje = $"La sesión corresponde a la cédula {cedulaToken.Trim()}, pero el registro usa {request.Cedula?.Trim()}. Inicie sesión con el ciudadano correcto."
+                });
 
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);

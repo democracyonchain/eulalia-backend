@@ -90,7 +90,7 @@ var ssiOk = ultimaSsi is not null &&
         {
             var success = await _service.AnularAsync(id);
             if (!success) return NotFound();
-            return NoContent();
+            return Ok(await _service.GetByIdAsync(id));
         }
     }
 }

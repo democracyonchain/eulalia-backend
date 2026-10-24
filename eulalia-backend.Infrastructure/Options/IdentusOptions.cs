@@ -7,5 +7,8 @@ namespace eulalia_backend.Infrastructure.Options
         public string BaseUrl { get; set; } = "http://localhost:8080/cloud-agent";
         public string? ApiKey { get; set; }
         public int TimeoutSeconds { get; set; } = 30;
+        public string? OrganizationSchemaId { get; set; }
+        public string? OrganizationHolderConnectionId { get; set; }
+        public string? OrganizationIssuingDid { get; set; }
     }
 }

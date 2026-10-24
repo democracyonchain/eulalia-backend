@@ -83,6 +83,28 @@ namespace eulalia_backend.Application.Services
             }
         }
 
+        public async Task<SSIInvitationDto> RetryInvitationAsync(string cedula)
+        {
+            var activeIssuances = (await _repository.GetAllAsync())
+                .Where(s => s.Cedula == cedula && s.Status != SsiIssuanceStatus.Failed)
+                .ToList();
+
+            foreach (var issuance in activeIssuances)
+            {
+                issuance.Status = SsiIssuanceStatus.Failed;
+                issuance.ErrorMessage = "Invitation replaced by an explicit retry request.";
+                issuance.UpdatedAt = DateTime.UtcNow;
+                _repository.Update(issuance);
+            }
+
+            if (activeIssuances.Count > 0)
+            {
+                await _repository.SaveChangesAsync();
+            }
+
+            return await CreateInvitationAsync(cedula);
+        }
+
         public async Task<SSIStatusDto> GetDidStatusAsync(string cedula)
         {
             var issuance = (await _repository.GetAllAsync())
@@ -130,14 +152,31 @@ namespace eulalia_backend.Application.Services
                 var doc = System.Text.Json.JsonDocument.Parse(eventBody);
                 var root = doc.RootElement;
 
-                var eventType = root.TryGetProperty("eventType", out var et) ? et.GetString() : "";
-                var connectionId = root.TryGetProperty("connectionId", out var cid) ? cid.GetString() : "";
-                var theirLabel = root.TryGetProperty("theirLabel", out var label) ? label.GetString() : "";
+                // Cloud Agent events use an envelope; retain the legacy top-level fields for older senders.
+                var data = root.TryGetProperty("data", out var eventData) && eventData.ValueKind == System.Text.Json.JsonValueKind.Object
+                    ? eventData
+                    : root;
+                var eventType = root.TryGetProperty("type", out var type)
+                    ? type.GetString()
+                    : root.TryGetProperty("eventType", out var legacyType) ? legacyType.GetString() : "";
+                var connectionId = data.TryGetProperty("connectionId", out var cid)
+                    ? cid.GetString()
+                    : root.TryGetProperty("connectionId", out var legacyConnectionId) ? legacyConnectionId.GetString() : "";
+                var theirLabel = data.TryGetProperty("label", out var label)
+                    ? label.GetString()
+                    : root.TryGetProperty("theirLabel", out var legacyLabel) ? legacyLabel.GetString() : "";
+                var connectionState = data.TryGetProperty("state", out var state) ? state.GetString() : "";
 
-                _logger.LogInformation("Received webhook event: {EventType}, ConnectionId: {ConnectionId}, Label: {Label}", 
-                    eventType, connectionId, theirLabel);
+                _logger.LogInformation("Received webhook event: {EventType}, ConnectionId: {ConnectionId}, Label: {Label}, ConnectionState: {ConnectionState}",
+                    eventType, connectionId, theirLabel, connectionState);
 
-                if (string.Equals(eventType, "ConnectionEstablished", StringComparison.OrdinalIgnoreCase))
+                var isConnectionEvent = string.Equals(eventType, "ConnectionUpdated", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(eventType, "ConnectionEstablished", StringComparison.OrdinalIgnoreCase);
+                var isEstablishedState = string.Equals(connectionState, "ConnectionResponseSent", StringComparison.OrdinalIgnoreCase)
+                    // Legacy ConnectionEstablished payloads did not include a separate state field.
+                    || (string.IsNullOrEmpty(connectionState) && string.Equals(eventType, "ConnectionEstablished", StringComparison.OrdinalIgnoreCase));
+
+                if (isConnectionEvent && isEstablishedState)
                 {
                     var cedula = "";
                     if (!string.IsNullOrEmpty(theirLabel) && theirLabel.StartsWith("VoterID-"))
@@ -153,9 +192,47 @@ namespace eulalia_backend.Application.Services
                         if (issuance != null)
                         {
                             var holderDid = $"did:peer:1:{connectionId}";
+
+                            // Claim the invitation before the external call so repeated state events cannot create offers twice.
+                            issuance.HolderDid = holderDid;
+                            issuance.Status = SsiIssuanceStatus.Requested;
+                            issuance.UpdatedAt = DateTime.UtcNow;
+                            _repository.Update(issuance);
+                            await _repository.SaveChangesAsync();
                             
-                            var schemaId = "Schema:VoterID:1.0";
-                            var offerResult = await _identusClient.CreateCredentialOfferAsync(holderDid, schemaId);
+                            var schemaId = _identusClient.ConfiguredSchemaId;
+                            if (string.IsNullOrWhiteSpace(schemaId))
+                            {
+                                issuance.Status = SsiIssuanceStatus.Failed;
+                                issuance.ErrorMessage = "Identus schema configuration is missing; credential offer was not created.";
+                                issuance.UpdatedAt = DateTime.UtcNow;
+                                _repository.Update(issuance);
+                                await _repository.SaveChangesAsync();
+                                _logger.LogError("Cannot create credential offer for {Cedula}: Identus schema configuration is missing", cedula);
+                                return;
+                            }
+
+                             (string RecordId, string OfferUrl)? offerResult;
+                             try
+                             {
+                                 offerResult = await _identusClient.CreateCredentialOfferAsync(
+                                     _identusClient.ConfiguredIssuingDid ?? holderDid,
+                                     schemaId,
+                                     connectionId!,
+                                     automaticIssuance: true);
+                             }
+                             catch (Exception ex)
+                             {
+                                 issuance.Status = SsiIssuanceStatus.Failed;
+                                 issuance.ErrorMessage = ex.Message;
+                                 issuance.UpdatedAt = DateTime.UtcNow;
+
+                                 _repository.Update(issuance);
+                                 await _repository.SaveChangesAsync();
+
+                                 _logger.LogError(ex, "Could not create credential offer for {Cedula}, issuance marked as failed", cedula);
+                                 return;
+                             }
                             
                             if (offerResult.HasValue)
                             {
@@ -170,19 +247,19 @@ namespace eulalia_backend.Application.Services
                                 _logger.LogInformation("Credential offer created for {Cedula}, RecordId: {RecordId}", 
                                     cedula, offerResult.Value.RecordId);
                             }
-                            else
-                            {
-                                issuance.HolderDid = holderDid;
-                                issuance.Status = SsiIssuanceStatus.CredentialIssued;
+                             else
+                             {
+                                issuance.Status = SsiIssuanceStatus.Failed;
+                                issuance.ErrorMessage = "Identus did not create a credential offer.";
                                 issuance.UpdatedAt = DateTime.UtcNow;
                                 
                                 _repository.Update(issuance);
                                 await _repository.SaveChangesAsync();
 
-                                _logger.LogWarning("Could not create credential offer for {Cedula}, but connection is established", cedula);
+                                _logger.LogError("Could not create credential offer for {Cedula}, issuance marked as failed", cedula);
                             }
 
-                            _logger.LogInformation("Connection established and credential issued for {Cedula}", cedula);
+                            _logger.LogInformation("Connection established and credential offer processing completed for {Cedula}", cedula);
                         }
                     }
                 }

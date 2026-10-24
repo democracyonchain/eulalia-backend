@@ -5,6 +5,8 @@ using eulalia_backend.Api.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using eulalia_backend.Application.Interfaces;
+using System.Security.Claims;
 
 namespace eulalia_backend.Api.Controllers
 {
@@ -13,10 +15,12 @@ namespace eulalia_backend.Api.Controllers
     public class SolicitudOrganizacionController : ControllerBase
     {
         private readonly EulaliaContext _context;
+        private readonly IOrganizacionIdentityService? _identityService;
 
-        public SolicitudOrganizacionController(EulaliaContext context)
+        public SolicitudOrganizacionController(EulaliaContext context, IOrganizacionIdentityService? identityService = null)
         {
             _context = context;
+            _identityService = identityService;
         }
 
         /// <summary>
@@ -149,6 +153,32 @@ namespace eulalia_backend.Api.Controllers
 
             if (request.Estado != "aprobado" && request.Estado != "rechazado")
                 return BadRequest("⚠️ Estado no válido. Debe ser 'aprobado' o 'rechazado'.");
+            if (User.FindFirstValue("rol") != "1")
+                return Forbid();
+
+            eulalia_backend.Domain.Entities.OrganizacionIdentidad? identity = null;
+            if (request.Estado == "aprobado")
+            {
+                try
+                {
+                    identity = await _identityService!.ProvisionAsync(solicitud.Organizacion_Id, HttpContext.RequestAborted);
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(StatusCodes.Status409Conflict, new
+                    {
+                        message = "La identidad de la organización no pudo completarse; la solicitud sigue pendiente.",
+                        error = "La organización debe conectar su wallet y completar la configuración de emisión antes de la aprobación."
+                    });
+                }
+            }
+
+            if (request.Estado == "aprobado" && (identity == null || identity.Estado != "completed"))
+                return Conflict(new
+                {
+                    message = "La credencial de autorización todavía no está emitida; la solicitud permanece pendiente.",
+                    error = "credential_pending"
+                });
 
             solicitud.Estado = request.Estado;
             solicitud.FechaRevision = DateTime.UtcNow;
@@ -157,7 +187,14 @@ namespace eulalia_backend.Api.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "✅ Estado actualizado correctamente." });
+            return Ok(new
+            {
+                message = "✅ Estado actualizado correctamente.",
+                identityStatus = identity?.Estado,
+                did = identity?.ClientDid ?? identity?.PublishedDid ?? identity?.LongFormDid,
+                publicationOperationId = identity?.PublicationOperationId,
+                credentialStatus = identity?.CredentialStatus
+            });
         }
 
     }

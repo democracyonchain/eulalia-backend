@@ -14,6 +14,14 @@ namespace eulalia_backend.Domain.Entities
         public string Estado { get; set; } = "activa"; // activa, cancelada
         public string? MotivoCancelacion { get; set; }
         public int? BlockchainTxId { get; set; }
+        public string? CardanoAffiliationEventId { get; set; }
+        public string? CardanoAffiliationRecordHash { get; set; }
+        public string? CardanoAffiliationTxHash { get; set; }
+        public string? CardanoAffiliationStatus { get; set; }
+        public string? CardanoCancellationEventId { get; set; }
+        public string? CardanoCancellationRecordHash { get; set; }
+        public string? CardanoCancellationTxHash { get; set; }
+        public string? CardanoCancellationStatus { get; set; }
         public int? UsuarioAprobador { get; set; }
         public bool EsUltima { get; set; } = true;
     }
