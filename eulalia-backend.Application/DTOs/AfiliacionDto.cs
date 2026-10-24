@@ -7,5 +7,9 @@ namespace eulalia_backend.Application.DTOs
         public int OrganizacionId { get; set; }
         public DateTime FechaAfiliacion { get; set; }
         public string Estado { get; set; } = default!;
+        public string? CardanoEventId { get; set; }
+        public string? CardanoEventType { get; set; }
+        public string? CardanoStatus { get; set; }
+        public string? CardanoTxHash { get; set; }
     }
 }

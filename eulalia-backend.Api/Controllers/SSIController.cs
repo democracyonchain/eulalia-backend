@@ -33,6 +33,20 @@ namespace eulalia_backend.Api.Controllers
             }
         }
 
+        [HttpPost("invitation/{cedula}/retry")]
+        public async Task<ActionResult<SSIInvitationDto>> RetryInvitation(string cedula)
+        {
+            try
+            {
+                var invitation = await _service.RetryInvitationAsync(cedula);
+                return Ok(invitation);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrying SSI invitation", error = ex.Message });
+            }
+        }
+
         [HttpGet("status/{cedula}")]
         public async Task<ActionResult<SSIStatusDto>> GetStatus(string cedula)
         {
